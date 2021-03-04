@@ -1,0 +1,15 @@
+1.install and upgrade
+
+vagrant up km1 --provision --provision-with misc,docker,configure_iptables,kubeadm,disable_swap,configure_hosts,initialize_cluster,configure_kubectl,write_token_and_hash,configure_flannel
+vagrant up n1 --provision --provision-with misc,docker,configure_iptables,kubeadm,disable_swap,configure_hosts,configure_kubectl_node,join_node_to_cluster
+vagrant up n2 --provision --provision-with misc,docker,configure_iptables,kubeadm,disable_swap,configure_hosts,configure_kubectl_node,join_node_to_cluster
+vagrant up n1 --provision --provision-with upgrade_kubectl_kubelet
+vagrant up n2 --provision --provision-with upgrade_kubectl_kubelet
+
+2. misc commands
+-reset cluster setup
+kubeadm reset --force
+
+-get cluster configuration
+kubectl -n kube-system get cm kubeadm-config -o yaml
+
