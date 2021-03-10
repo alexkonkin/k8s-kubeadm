@@ -183,7 +183,7 @@ $upgrade_server = <<-SCRIPT
   export KUBECONFIG=/home/vagrant/.kube/config && kubectl get nodes
   export KUBECONFIG=/home/vagrant/.kube/config && kubectl kubeadm plan
   export KUBECONFIG=/home/vagrant/.kube/config && sudo kubeadm upgrade apply v1.20.0 -y
-  export KUBECONFIG=/home/vagrant/.kube/config && sudo kubectl uncordon $node
+  export KUBECONFIG=/home/vagrant/.kube/config && sudo kubectl uncordon c1-master1
   
 SCRIPT
 
