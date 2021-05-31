@@ -84,9 +84,9 @@ $configure_hosts = <<-SCRIPT
   echo    ""
   
 cat <<EOF | sudo tee /etc/hosts.new
-172.16.94.10                    c1-master1
-172.16.94.11                    c1-node1
-172.16.94.12                    c1-node2
+172.16.95.10                    c1-master1
+172.16.95.11                    c1-node1
+172.16.95.12                    c1-node2
 EOF
    
    sudo rm -fv /etc/hosts
@@ -101,7 +101,7 @@ $initialize_cluster = <<-SCRIPT
   echo    "------------------------------------------------------------------"
   echo    ""
   
-  kubeadm init --apiserver-advertise-address=172.16.94.10 --pod-network-cidr=192.168.0.0/16
+  kubeadm init --apiserver-advertise-address=172.16.95.10 --pod-network-cidr=192.168.0.0/16
 
 SCRIPT
 
@@ -162,7 +162,7 @@ $join_node_to_cluster = <<-SCRIPT
   
   echo $token
   echo $hash
-  export KUBECONFIG=/home/vagrant/.kube/config && kubeadm join 172.16.94.10:6443 --token $token --discovery-token-ca-cert-hash sha256:$hash
+  export KUBECONFIG=/home/vagrant/.kube/config && kubeadm join 172.16.95.10:6443 --token $token --discovery-token-ca-cert-hash sha256:$hash
   kubectl get nodes
   
 SCRIPT
@@ -179,9 +179,9 @@ $upgrade_server = <<-SCRIPT
   sudo apt-get install -y kubeadm=1.20.0-00
   apt-mark hold kubeadm
   export KUBECONFIG=/home/vagrant/.kube/config && kubectl get nodes
-  export KUBECONFIG=/home/vagrant/.kube/config && kubectl drain c1-master1 --ignore-daemonsets
+  export KUBECONFIG=/home/vagrant/.kube/config && kubectl drain c1-master1 --ignore-daemonsets --delete-local-data --force
   export KUBECONFIG=/home/vagrant/.kube/config && kubectl get nodes
-  export KUBECONFIG=/home/vagrant/.kube/config && kubectl kubeadm plan
+  export KUBECONFIG=/home/vagrant/.kube/config && kubeadm upgrade plan
   export KUBECONFIG=/home/vagrant/.kube/config && sudo kubeadm upgrade apply v1.20.0 -y
   export KUBECONFIG=/home/vagrant/.kube/config && sudo kubectl uncordon c1-master1
   
@@ -225,43 +225,43 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.define "n1" do |n1|
     n1.vm.box = "bento/ubuntu-16.04"
     n1.vm.hostname = "c1-node1"
-    n1.vm.network :private_network, ip: "172.16.94.11"
+    n1.vm.network :private_network, ip: "172.16.95.11"
 	
-	config.vm.provision "misc", type: "shell" do |shell|
+    config.vm.provision "misc", type: "shell" do |shell|
       shell.inline = $install_misc
     end
 	
-	config.vm.provision "docker", type: "shell" do |shell|
+    config.vm.provision "docker", type: "shell" do |shell|
        shell.inline = $install_docker
     end
 	
-	config.vm.provision "iptables", type: "shell" do |shell|
+    config.vm.provision "iptables", type: "shell" do |shell|
        shell.inline = $configure_iptables
     end
 	
-	config.vm.provision "kubeadm", type: "shell" do |shell|
+    config.vm.provision "kubeadm", type: "shell" do |shell|
        shell.inline = $install_kubeadm
     end
 
-	config.vm.provision "disable_swap", type: "shell" do |shell|
+    config.vm.provision "disable_swap", type: "shell" do |shell|
        shell.inline = $disable_swap
     end
 	
-	config.vm.provision "configure_hosts", type: "shell" do |shell|
+    config.vm.provision "configure_hosts", type: "shell" do |shell|
        shell.inline = $configure_hosts
     end
 
-  	config.vm.provision "configure_kubectl_node", type: "shell" do |shell|
+    config.vm.provision "configure_kubectl_node", type: "shell" do |shell|
        shell.inline = $configure_kubectl_node
     end
 
-  	config.vm.provision "join_node_to_cluster", type: "shell" do |shell|
+    config.vm.provision "join_node_to_cluster", type: "shell" do |shell|
        shell.inline = $join_node_to_cluster
     end
 	
-	config.vm.provision "upgrade_kubectl_kubelet", type: "shell" do |shell|
+    config.vm.provision "upgrade_kubectl_kubelet", type: "shell" do |shell|
        shell.inline = $upgrade_kubectl_kubelet
-	   shell.args = ["c1-node1","1.20.0-00"]
+       shell.args = ["c1-node1","1.20.0-00"]
     end
 	
   end
@@ -269,7 +269,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.define "n2" do |n2|
     n2.vm.box = "bento/ubuntu-16.04"
     n2.vm.hostname = "c1-node2"
-    n2.vm.network :private_network, ip: "172.16.94.12"
+    n2.vm.network :private_network, ip: "172.16.95.12"
 
 	config.vm.provision "misc", type: "shell" do |shell|
       shell.inline = $install_misc
@@ -313,50 +313,54 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.define "km1" do |km1|
     km1.vm.box = "bento/ubuntu-16.04"
     km1.vm.hostname = "c1-master1"
-    km1.vm.network :private_network, ip: "172.16.94.10"
-	km1.vm.network "forwarded_port", guest: 8001, host: 8888
+    km1.vm.network :private_network, ip: "172.16.95.10"
+	km1.vm.network "forwarded_port", guest: 8001, host: 8811
 
-	config.vm.provision "misc", type: "shell" do |shell|
+    config.vm.provision "misc", type: "shell" do |shell|
       shell.inline = $install_misc
       shell.args = ["no_args"]
     end
 	
-	config.vm.provision "docker", type: "shell" do |shell|
+   config.vm.provision "docker", type: "shell" do |shell|
        shell.inline = $install_docker
     end
 	
-	config.vm.provision "iptables", type: "shell" do |shell|
+    config.vm.provision "iptables", type: "shell" do |shell|
        shell.inline = $configure_iptables
     end
 	
-	config.vm.provision "kubeadm", type: "shell" do |shell|
+    config.vm.provision "kubeadm", type: "shell" do |shell|
        shell.inline = $install_kubeadm
     end
 
-	config.vm.provision "disable_swap", type: "shell" do |shell|
+    config.vm.provision "disable_swap", type: "shell" do |shell|
        shell.inline = $disable_swap
     end
 	
-	config.vm.provision "configure_hosts", type: "shell" do |shell|
+    config.vm.provision "configure_hosts", type: "shell" do |shell|
        shell.inline = $configure_hosts
     end
 	
-	config.vm.provision "initialize_cluster", type: "shell" do |shell|
+    config.vm.provision "initialize_cluster", type: "shell" do |shell|
        shell.inline = $initialize_cluster
     end
 
-  	config.vm.provision "configure_kubectl", type: "shell" do |shell|
+    config.vm.provision "configure_kubectl", type: "shell" do |shell|
        shell.inline = $configure_kubectl
     end
 
-	config.vm.provision "write_token_and_hash", type: "shell" do |shell|
+    config.vm.provision "write_token_and_hash", type: "shell" do |shell|
        shell.inline = $write_token_and_hash
     end	
 
-	config.vm.provision "configure_flannel", type: "shell" do |shell|
+    config.vm.provision "configure_flannel", type: "shell" do |shell|
        shell.inline = $configure_flannel
     end	
    end
+
+    config.vm.provision "upgrade_server", type: "shell" do |shell|
+       shell.inline = $upgrade_server
+    end	
    
   config.vm.provider :virtualbox do |vb|
     vb.customize ["modifyvm", :id, "--memory", "2024"]
