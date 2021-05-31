@@ -149,7 +149,7 @@ $write_token_and_hash = <<-SCRIPT
   
 SCRIPT
 
-$configure_flannel = <<-SCRIPT
+$configure_network = <<-SCRIPT
   echo    "------------------------------------------------------------------"
   echo    "| configure flannel network on kubernetes master node             |"
   echo    "------------------------------------------------------------------"
@@ -388,8 +388,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     end	
 
 	
-	config.vm.provision "configure_flannel", type: "shell" do |shell|
-       shell.inline = $configure_flannel
+	config.vm.provision "configure_network", type: "shell" do |shell|
+       shell.inline = $configure_network
     end	
    end
 
