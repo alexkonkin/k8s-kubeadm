@@ -64,6 +64,27 @@ EOF
 
 SCRIPT
 
+$configure_kubelet = <<-SCRIPT
+  NODE_IP=$1
+  echo    ""
+  echo    "-------------------------------------------------"
+  echo    "|   configure kubelet to not use 10.2.0.15 ip  |"
+  echo    "-------------------------------------------------"
+  echo    ""
+
+  if [ ! -f /var/lib/kubelet/kubeadm-flags.env ]; then
+    echo "File /var/lib/kubelet/kubeadm-flags.env not found!"
+	mkdir -pv /var/lib/kubelet/
+	touch /var/lib/kubelet/kubeadm-flags.env
+  fi
+  echo "KUBELET_EXTRA_ARGS=--node-ip=$NODE_IP" >> /var/lib/kubelet/kubeadm-flags.env
+  systemctl daemon-reload
+  systemctl restart kubelet
+
+SCRIPT
+
+
+
 $disable_swap = <<-SCRIPT
   echo    ""
   echo    "------------------------------------------------------------------"
@@ -101,8 +122,7 @@ $initialize_cluster = <<-SCRIPT
   echo    "------------------------------------------------------------------"
   echo    ""
   
-  kubeadm init --apiserver-advertise-address=172.16.95.10 --pod-network-cidr=192.168.0.0/16
-
+  kubeadm init --apiserver-advertise-address=172.16.95.10 --pod-network-cidr=10.244.0.0/16
 SCRIPT
 
 $configure_kubectl = <<-SCRIPT
@@ -135,8 +155,7 @@ $configure_flannel = <<-SCRIPT
   echo    "------------------------------------------------------------------"
   echo    ""
 
-  export KUBECONFIG=/home/vagrant/.kube/config && kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-  
+  export KUBECONFIG=/home/vagrant/.kube/config && kubectl apply -f "https://docs.projectcalico.org/archive/v3.18/manifests/calico.yaml"
 SCRIPT
 
 $configure_kubectl_node = <<-SCRIPT
@@ -227,41 +246,46 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     n1.vm.hostname = "c1-node1"
     n1.vm.network :private_network, ip: "172.16.95.11"
 	
-    config.vm.provision "misc", type: "shell" do |shell|
+	config.vm.provision "misc", type: "shell" do |shell|
       shell.inline = $install_misc
     end
 	
-    config.vm.provision "docker", type: "shell" do |shell|
+	config.vm.provision "docker", type: "shell" do |shell|
        shell.inline = $install_docker
     end
 	
-    config.vm.provision "iptables", type: "shell" do |shell|
+	config.vm.provision "iptables", type: "shell" do |shell|
        shell.inline = $configure_iptables
     end
 	
-    config.vm.provision "kubeadm", type: "shell" do |shell|
+	config.vm.provision "kubeadm", type: "shell" do |shell|
        shell.inline = $install_kubeadm
     end
 
-    config.vm.provision "disable_swap", type: "shell" do |shell|
+	config.vm.provision "configure_kubelet", type: "shell" do |shell|
+       shell.inline = $configure_kubelet
+	   shell.args = ["172.16.95.11"]
+    end	
+	
+	config.vm.provision "disable_swap", type: "shell" do |shell|
        shell.inline = $disable_swap
     end
 	
-    config.vm.provision "configure_hosts", type: "shell" do |shell|
+	config.vm.provision "configure_hosts", type: "shell" do |shell|
        shell.inline = $configure_hosts
     end
 
-    config.vm.provision "configure_kubectl_node", type: "shell" do |shell|
+  	config.vm.provision "configure_kubectl_node", type: "shell" do |shell|
        shell.inline = $configure_kubectl_node
     end
 
-    config.vm.provision "join_node_to_cluster", type: "shell" do |shell|
+  	config.vm.provision "join_node_to_cluster", type: "shell" do |shell|
        shell.inline = $join_node_to_cluster
     end
 	
-    config.vm.provision "upgrade_kubectl_kubelet", type: "shell" do |shell|
+	config.vm.provision "upgrade_kubectl_kubelet", type: "shell" do |shell|
        shell.inline = $upgrade_kubectl_kubelet
-       shell.args = ["c1-node1","1.20.0-00"]
+	   shell.args = ["c1-node1","1.20.0-00"]
     end
 	
   end
@@ -287,6 +311,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
        shell.inline = $install_kubeadm
     end
 
+	config.vm.provision "configure_kubelet", type: "shell" do |shell|
+       shell.inline = $configure_kubelet
+	   shell.args = ["172.16.95.12"]
+    end	
+	
 	config.vm.provision "disable_swap", type: "shell" do |shell|
        shell.inline = $disable_swap
     end
@@ -316,49 +345,55 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     km1.vm.network :private_network, ip: "172.16.95.10"
 	km1.vm.network "forwarded_port", guest: 8001, host: 8811
 
-    config.vm.provision "misc", type: "shell" do |shell|
+	config.vm.provision "misc", type: "shell" do |shell|
       shell.inline = $install_misc
       shell.args = ["no_args"]
     end
 	
-   config.vm.provision "docker", type: "shell" do |shell|
+	config.vm.provision "docker", type: "shell" do |shell|
        shell.inline = $install_docker
     end
 	
-    config.vm.provision "iptables", type: "shell" do |shell|
+	config.vm.provision "iptables", type: "shell" do |shell|
        shell.inline = $configure_iptables
     end
 	
-    config.vm.provision "kubeadm", type: "shell" do |shell|
+	config.vm.provision "kubeadm", type: "shell" do |shell|
        shell.inline = $install_kubeadm
     end
 
-    config.vm.provision "disable_swap", type: "shell" do |shell|
+	config.vm.provision "configure_kubelet", type: "shell" do |shell|
+       shell.inline = $configure_kubelet
+	   shell.args = ["172.16.95.10"]
+    end	
+	
+	config.vm.provision "disable_swap", type: "shell" do |shell|
        shell.inline = $disable_swap
     end
 	
-    config.vm.provision "configure_hosts", type: "shell" do |shell|
+	config.vm.provision "configure_hosts", type: "shell" do |shell|
        shell.inline = $configure_hosts
     end
 	
-    config.vm.provision "initialize_cluster", type: "shell" do |shell|
+	config.vm.provision "initialize_cluster", type: "shell" do |shell|
        shell.inline = $initialize_cluster
     end
 
-    config.vm.provision "configure_kubectl", type: "shell" do |shell|
+  	config.vm.provision "configure_kubectl", type: "shell" do |shell|
        shell.inline = $configure_kubectl
     end
 
-    config.vm.provision "write_token_and_hash", type: "shell" do |shell|
+	config.vm.provision "write_token_and_hash", type: "shell" do |shell|
        shell.inline = $write_token_and_hash
     end	
 
-    config.vm.provision "configure_flannel", type: "shell" do |shell|
+	
+	config.vm.provision "configure_flannel", type: "shell" do |shell|
        shell.inline = $configure_flannel
     end	
    end
 
-    config.vm.provision "upgrade_server", type: "shell" do |shell|
+   	config.vm.provision "upgrade_server", type: "shell" do |shell|
        shell.inline = $upgrade_server
     end	
    
