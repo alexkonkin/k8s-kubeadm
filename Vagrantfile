@@ -105,13 +105,14 @@ $configure_hosts = <<-SCRIPT
   echo    ""
   
 cat <<EOF | sudo tee /etc/hosts.new
+127.0.0.1                       localhost localhost.localdomain
 172.16.95.10                    c1-master1
 172.16.95.11                    c1-node1
 172.16.95.12                    c1-node2
 EOF
-   
-   sudo rm -fv /etc/hosts
-   sudo mv -v /etc/hosts.new /etc/hosts
+
+   sudo cat /etc/hosts.new > /etc/hosts
+   sudo rm -fv /etc/hosts.new
 SCRIPT
 
 
